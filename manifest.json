@@ -1,0 +1,26 @@
+{
+  "name": "个人综合工作台",
+  "short_name": "工作台",
+  "description": "个人综合工作台 - 阅读记录、灵感记录、锻炼身体、每日记账、学习打卡、备忘录",
+  "start_url": ".",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#eef2f7",
+  "theme_color": "#5b8def",
+  "lang": "zh-CN",
+  "scope": "/workbench/",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
