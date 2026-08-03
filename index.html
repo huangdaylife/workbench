@@ -8,6 +8,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="工作台">
+<link rel="manifest" href="./manifest.json">
 <title>个人综合工作台</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -1059,17 +1060,18 @@ function delMemo(id){DB.set('memos',DB.get('memos',[]).filter(m=>m.id!==id));toa
 // ====== HTML转义 ======
 function esc(s){if(!s)return'';return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
 
-// ====== PWA Manifest ======
+// ====== PWA Manifest & Service Worker ======
 function setupManifest(){
-const iconSvg=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" rx="100" fill="#5b8def"/><circle cx="160" cy="160" r="50" fill="#6c5ce7"/><circle cx="352" cy="160" r="50" fill="#ffa502"/><circle cx="160" cy="352" r="50" fill="#00b894"/><circle cx="352" cy="352" r="50" fill="#ff6b6b"/><circle cx="256" cy="256" r="60" fill="#fff"/></svg>`;
-const iconUrl='data:image/svg+xml,'+encodeURIComponent(iconSvg);
-const appName=DB.get('appTitle','个人综合工作台');
-const oldLink=document.querySelector('link[rel="manifest"]');if(oldLink)oldLink.remove();
-const manifest={name:appName,short_name:appName.length>4?appName.substring(0,4):appName,display:'standalone',orientation:'portrait',start_url:'.',background_color:'#eef2f7',theme_color:'#5b8def',icons:[{src:iconUrl,sizes:'512x512',type:'image/svg+xml',purpose:'any maskable'},{src:iconUrl,sizes:'192x192',type:'image/svg+xml',purpose:'any maskable'}]};
-const blob=new Blob([JSON.stringify(manifest)],{type:'application/manifest+json'});
-const link=document.createElement('link');link.rel='manifest';link.href=URL.createObjectURL(blob);document.head.appendChild(link);
-const iconLink=document.createElement('link');iconLink.rel='apple-touch-icon';iconLink.href=iconUrl;document.head.appendChild(iconLink);
-const favLink=document.createElement('link');favLink.rel='icon';favLink.href=iconUrl;document.head.appendChild(favLink);
+// Register service worker for PWA install support
+if('serviceWorker' in navigator){
+navigator.serviceWorker.register('./sw.js').catch(()=>{});
+}
+// Set favicon
+const iconPng='./icon-192.png';
+const iconLink=document.createElement('link');iconLink.rel='apple-touch-icon';iconLink.href=iconPng;document.head.appendChild(iconLink);
+const favLink=document.createElement('link');favLink.rel='icon';favLink.href=iconPng;document.head.appendChild(favLink);
+// Listen for app title changes to update manifest
+window.addEventListener('beforeinstallprompt',e=>{window._pwaEvent=e;});
 }
 
 // ====== 数据备份与恢复 ======
