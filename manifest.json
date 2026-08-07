@@ -1,6 +1,6 @@
 {
-  "name": "个人综合工作台",
-  "short_name": "工作台",
+  "name": "含章 - 个人综合工作台",
+  "short_name": "含章",
   "description": "个人综合工作台 - 阅读记录、灵感记录、锻炼身体、每日记账、学习打卡、备忘录",
   "start_url": ".",
   "display": "standalone",
