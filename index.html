@@ -855,10 +855,13 @@ function renderBookDetail(){
   }else{
     $('#book-notes-list').innerHTML=notes.map(n=>{
       const annosHtml=(n.annotations||[]).map(a=>`<div class="anno-block">💬 ${esc(a)}</div>`).join('');
-      return `<div class="note-item">
+      return `<div class="note-item" data-note-id="${n.id}">
         <div class="note-item-head">
           <span style="font-size:11px;color:#6c5ce7;font-weight:600">📝 ${fmtDate(n.date)}</span>
-          <button class="btn btn-outline btn-sm" style="color:#ff6b6b;border-color:#ff6b6b;padding:2px 8px;font-size:11px" onclick="delExcerpt('${n.id}')">删除</button>
+          <div style="display:flex;gap:4px">
+            <button class="btn btn-outline btn-sm" style="color:var(--sub);border-color:var(--light);padding:2px 8px;font-size:11px" onclick="editExcerpt('${n.id}')">编辑</button>
+            <button class="btn btn-outline btn-sm" style="color:#ff6b6b;border-color:#ff6b6b;padding:2px 8px;font-size:11px" onclick="delExcerpt('${n.id}')">删除</button>
+          </div>
         </div>
         <div class="note-block">${esc(n.text)}</div>
         ${annosHtml}
@@ -939,6 +942,60 @@ function delExcerpt(noteId){
   book.notes=book.notes.filter(n=>n.id!==noteId);
   DB.set('books',books);
   toast('已删除摘抄');renderBookDetail()
+}
+
+// 编辑摘抄
+let editingNoteId=null;
+function editExcerpt(noteId){
+  const books=DB.get('books',[]);
+  const book=books.find(b=>b.id===currentBookId);
+  if(!book)return;
+  const note=book.notes.find(n=>n.id===noteId);
+  if(!note)return;
+  editingNoteId=noteId;
+  const annos=(note.annotations||[]).map((a,i)=>`<div class="anno-row" style="display:flex;gap:6px;align-items:center;margin-top:4px"><input class="form-input" value="${esc(a)}" data-anno-idx="${i}" placeholder="批注内容..." style="font-size:12px;flex:1"><button class="btn btn-outline btn-sm" style="color:#e17055;border-color:#e17055;padding:4px 8px;font-size:11px;flex-shrink:0" onclick="this.closest('.anno-row').remove()">✕</button></div>`).join('');
+  // 找到对应 note-item 替换为编辑表单
+  const items=$$('#book-notes-list .note-item');
+  // 通过 data-note-id 定位
+  const target=document.querySelector(`.note-item[data-note-id="${noteId}"]`);
+  if(!target)return;
+  target.style.background='#f8f9fe';
+  target.style.borderRadius='8px';
+  target.style.padding='10px';
+  target.style.borderBottom='none';
+  target.innerHTML=`
+    <div style="font-size:11px;color:#6c5ce7;font-weight:600;margin-bottom:8px">📝 编辑摘抄</div>
+    <textarea class="form-textarea" id="edit-excerpt-text" style="min-height:80px;width:100%">${note.text}</textarea>
+    <div id="edit-anno-area">${annos}</div>
+    <button class="btn btn-outline btn-sm" style="color:#e17055;border-color:#e17055;font-size:11px;margin-top:4px" onclick="addEditAnno()">+ 添加批注</button>
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <button class="btn btn-sm" style="background:var(--primary);color:#fff;flex:1;max-width:80px" onclick="saveEditExcerpt('${noteId}')">保存</button>
+      <button class="btn btn-outline btn-sm" style="flex:1;max-width:80px" onclick="cancelEditExcerpt()">取消</button>
+    </div>`;
+}
+function addEditAnno(){
+  $('#edit-anno-area').insertAdjacentHTML('beforeend','<div class="anno-row" style="display:flex;gap:6px;align-items:center;margin-top:4px"><input class="form-input" placeholder="批注内容..." style="font-size:12px;flex:1"><button class="btn btn-outline btn-sm" style="color:#e17055;border-color:#e17055;padding:4px 8px;font-size:11px;flex-shrink:0" onclick="this.closest(\'.anno-row\').remove()">✕</button></div>');
+}
+function saveEditExcerpt(noteId){
+  const text=($('#edit-excerpt-text')||{}).value;
+  if(!text||!text.trim()){toast('摘抄内容不能为空');return}
+  const annos=[];
+  $$('#edit-anno-area input').forEach(inp=>{const v=inp.value.trim();if(v)annos.push(v)});
+  const books=DB.get('books',[]);
+  const book=books.find(b=>b.id===currentBookId);
+  if(!book||!book.notes)return;
+  const note=book.notes.find(n=>n.id===noteId);
+  if(!note)return;
+  note.text=text.trim();
+  note.annotations=annos;
+  DB.set('books',books);
+  editingNoteId=null;
+  toast('摘抄已更新');
+  renderBookDetail();
+}
+function cancelEditExcerpt(){
+  editingNoteId=null;
+  renderBookDetail();
 }
 
 // 兼容旧代码
