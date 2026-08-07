@@ -374,6 +374,22 @@ input:focus,textarea:focus,select:focus{outline:none}
 </div>
 </div>
 <div class="card">
+<div class="card-title">体重记录</div>
+<div class="form-row">
+<div class="form-group">
+<label>日期</label>
+<input class="form-input" id="weight-date" type="date">
+</div>
+<div class="form-group">
+<label>体重（kg）</label>
+<input class="form-input" id="weight-value" type="number" step="0.1" placeholder="65.0">
+</div>
+</div>
+<button class="btn btn-success" onclick="addWeight()">记录体重</button>
+<div id="weight-chart" style="margin-top:16px"></div>
+<div id="weight-list" style="margin-top:12px"></div>
+</div>
+<div class="card">
 <div class="card-title">本月运动日历 <span style="font-size:12px;color:var(--sub);font-weight:400" id="exer-month-label"></span></div>
 <div class="cal-wrap" id="exer-calendar"></div>
 </div>
@@ -1063,8 +1079,10 @@ $('#exer-duration').value='';$('#exer-notes').value='';$('#exer-date').value=tod
 toast('运动打卡成功！');renderExercise();updateOverview()
 }
 function renderExercise(){
-renderExerciseTypes();
-$('#exer-date').value=today();
+  renderExerciseTypes();
+  $('#exer-date').value=today();
+  $('#weight-date').value=today();
+  renderWeights();
 const list=DB.get('exercises',[]);
 // 日历
 const now2=new Date();
@@ -1092,6 +1110,73 @@ if(list.length===0){$('#exer-list').innerHTML='<div class="empty">暂无运动�
 $('#exer-list').innerHTML=list.slice(0,30).map(e=>`<div class="list-item"><div class="list-item-head"><div><div class="list-item-title">${esc(e.type)} · ${e.duration}分钟</div><div class="list-item-meta">${fmtDate(e.date)}${e.notes?' · '+esc(e.notes):''}</div></div><button class="delete-btn" onclick="delExercise('${e.id}')">删除</button></div></div>`).join('');
 }
 function delExercise(id){DB.set('exercises',DB.get('exercises',[]).filter(e=>e.id!==id));toast('已删除');renderExercise();updateOverview()}
+
+// ====== 体重记录 ======
+function addWeight(){
+  const w=parseFloat($('#weight-value').value);
+  const d=$('#weight-date').value||today();
+  if(!w||w<=0||w>300){toast('请输入有效体重');return}
+  const list=DB.get('bodyWeights',[]);
+  list.unshift({id:uid(),weight:w,date:d,ts:now()});
+  list.sort((a,b)=>new Date(a.date)-new Date(b.date));
+  DB.set('bodyWeights',list);
+  $('#weight-value').value='';$('#weight-date').value=today();
+  toast('体重已记录');
+  renderWeights();
+}
+function renderWeights(){
+  const list=DB.get('bodyWeights',[]);
+  if(list.length===0){$('#weight-chart').innerHTML='';$('#weight-list').innerHTML='<div class="empty">暂无体重记录</div>';return}
+  // 折线图
+  const maxW=Math.max(...list.map(w=>w.weight));
+  const minW=Math.min(...list.map(w=>w.weight));
+  const range=maxW-minW||1;
+  const pad=range*0.15;
+  const yMin=minW-pad;const yMax=maxW+pad;
+  const r=yMax-yMin;
+  const W=340;const H=180;const padL=36;const padR=16;const padT=16;const padB=24;
+  const fw=W-padL-padR;const fh=H-padT-padB;
+  const n=list.length;
+  // Y轴刻度
+  let yTicks='';
+  for(let i=0;i<=3;i++){
+    const v=yMin+(r*i/3);
+    const y=padT+fh-(v-yMin)/r*fh;
+    yTicks+=`<text x="${padL-4}" y="${y}" text-anchor="end" font-size="10" fill="#a0a0a0">${v.toFixed(1)}</text>`;
+    if(i>0)yTicks+=`<line x1="${padL}" y1="${y}" x2="${W-padR}" y2="${y}" stroke="#eee" stroke-width="0.5"/>`;
+  }
+  // 数据点
+  const step=fw/(n-1||1);
+  let points='';let labels='';let showLabels=Math.ceil(n/6);
+  list.forEach((w,i)=>{
+    const x=padL+i*step;
+    const y=padT+fh-(w.weight-yMin)/r*fh;
+    points+=`<circle cx="${x}" cy="${y}" r="3" fill="#00b894"/>`;
+    if(i%showLabels===0||i===n-1){
+      const dateStr=w.date.slice(5);
+      labels+=`<text x="${x}" y="${H-4}" text-anchor="middle" font-size="9" fill="#a0a0a0">${dateStr}</text>`;
+    }
+  });
+  // 折线
+  let polyline=list.map((w,i)=>{
+    const x=padL+i*step;
+    const y=padT+fh-(w.weight-yMin)/r*fh;
+    return `${x},${y}`;
+  }).join(' ');
+  const svg=`<svg viewBox="0 0 ${W} ${H}" width="100%" style="max-width:${W}px"><polyline points="${polyline}" fill="none" stroke="#00b894" stroke-width="2" stroke-linejoin="round"/>${points}${yTicks}${labels}</svg>`;
+  $('#weight-chart').innerHTML=svg;
+  // 历史列表
+  const latest=list.slice(-8).reverse();
+  $('#weight-list').innerHTML=latest.map(w=>{
+    const trend=list.indexOf(w)<list.length-1?((()=>{const idx=list.indexOf(w);if(idx<list.length-1){const prev=list[idx+1];const diff=w.weight-prev.weight;if(Math.abs(diff)<0.1)return '→';return diff>0?'↑':'↓'}return ''})()):'';
+    return `<div class="list-item" style="display:flex;justify-content:space-between;align-items:center"><div>📅 ${fmtDate(w.date)} · <b>${w.weight} kg</b> <span style="font-size:11px;color:${trend==='↑'?'#ff6b6b':trend==='↓'?'#00b894':'#999'}">${trend}</span></div><button class="delete-btn" onclick="delWeight('${w.id}')">删除</button></div>`;
+  }).join('');
+}
+function delWeight(id){
+  if(!confirm('确定删除这条体重记录吗？'))return;
+  DB.set('bodyWeights',DB.get('bodyWeights',[]).filter(w=>w.id!==id));
+  renderWeights();toast('已删除');
+}
 
 // ====== 4.每日记账 ======
 let accType='expense';
@@ -1290,7 +1375,7 @@ window.addEventListener('beforeinstallprompt',e=>{window._pwaEvent=e;});
 }
 
 // ====== 数据备份与恢复 ======
-const ALL_KEYS=['reading','books','readCheckins','inspirations','exercises','exerciseTypes','accounts','accCategories','learning','memos','timerState','moduleConfig','appTitle'];
+const ALL_KEYS=['reading','books','readCheckins','inspirations','exercises','exerciseTypes','bodyWeights','accounts','accCategories','learning','memos','timerState','moduleConfig','appTitle'];
 function backupAllData(){
 const data={};ALL_KEYS.forEach(k=>{const v=localStorage.getItem('wb_'+k);if(v)data[k]=v});
 data['_backupTime']=new Date().toISOString();
@@ -1325,6 +1410,7 @@ const stats=[
 ['阅读打卡',DB.get('readCheckins',[]).length+'天'],
 ['灵感记录',DB.get('inspirations',[]).length+'条'],
 ['运动记录',DB.get('exercises',[]).length+'条'],
+['体重记录',DB.get('bodyWeights',[]).length+'条'],
 ['记账记录',DB.get('accounts',[]).length+'条'],
 ['学习任务',DB.get('learning',[]).length+'条'],
 ['备忘录',DB.get('memos',[]).length+'条']
