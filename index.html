@@ -102,6 +102,18 @@ input:focus,textarea:focus,select:focus{outline:none}
 .list-item-body{font-size:13px;color:#57606f;margin-top:6px;white-space:pre-wrap;word-break:break-word}
 .note-block{border-left:3px solid #6c5ce7;padding:6px 0 6px 10px;margin:8px 0;font-size:13px;color:#2c3e50;white-space:pre-wrap;word-break:break-word;background:rgba(108,92,231,.04);border-radius:0 6px 6px 0}
 .anno-block{border-left:3px solid #e17055;padding:4px 0 4px 10px;margin:4px 0 4px 16px;font-size:12px;color:#e17055;white-space:pre-wrap;word-break:break-word;background:rgba(225,112,85,.04);border-radius:0 6px 6px 0}
+.book-item{display:flex;gap:12px;background:#f8f9fa;border-radius:12px;padding:12px;margin-bottom:8px;cursor:pointer;transition:transform .12s}
+.book-item:active{transform:scale(.98)}
+.book-cover{width:50px;height:66px;object-fit:cover;border-radius:4px;flex-shrink:0;background:#e8ecf1}
+.book-cover-placeholder{width:50px;height:66px;border-radius:4px;flex-shrink:0;background:linear-gradient(135deg,#a29bfe,#6c5ce7);display:flex;align-items:center;justify-content:center;font-size:20px}
+.book-info{flex:1;min-width:0}
+.book-title{font-weight:600;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.book-meta{font-size:11px;color:var(--sub);margin-top:3px}
+.book-badge{display:inline-block;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:600;margin-left:4px}
+.badge-reading{background:rgba(0,184,148,.15);color:#00b894}
+.badge-done{background:rgba(108,92,231,.15);color:#6c5ce7}
+.note-item{background:#f8f9fe;border-radius:8px;padding:10px;margin-bottom:8px}
+.note-item-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
 .tag{display:inline-block;padding:2px 8px;border-radius:6px;font-size:10px;font-weight:600}
 .tag-read{background:rgba(108,92,231,.15);color:#6c5ce7}
 .tag-insp{background:rgba(255,165,2,.15);color:#ffa502}
@@ -214,8 +226,11 @@ input:focus,textarea:focus,select:focus{outline:none}
 </div>
 </section>
 
-<!-- ========== 每日阅读 ========== -->
+<!-- ========== 阅读记录 ========== -->
 <section id="view-reading" class="view">
+
+<!-- 书架列表视图 -->
+<div id="reading-list-view">
 <div class="mod-header">
 <button class="back-btn" onclick="navHome()">‹</button>
 <h1 id="header-reading">📚 阅读记录</h1>
@@ -224,47 +239,65 @@ input:focus,textarea:focus,select:focus{outline:none}
 <button class="checkin-btn" id="read-checkin" onclick="toggleReadCheckin()">📋 今日打卡</button>
 </div>
 <div class="card">
-<div class="card-title">添加阅读记录</div>
+<div class="card-title">添加书籍</div>
 <div class="form-group">
 <label>书籍名称</label>
-<input class="form-input" id="read-book" type="text" placeholder="如：深入理解计算机系统">
+<input class="form-input" id="book-title-input" type="text" placeholder="如：深入理解计算机系统">
 </div>
 <div class="form-group">
 <label>作者</label>
-<input class="form-input" id="read-author" type="text" placeholder="如：Randal E. Bryant">
+<input class="form-input" id="book-author-input" type="text" placeholder="如：Randal E. Bryant">
 </div>
 <div class="form-group">
 <label>封面图（可选，从手机相册选择）</label>
 <div style="display:flex;align-items:center;gap:10px">
-<input type="file" id="read-cover-file" accept="image/*" onchange="handleCoverUpload(this)" style="display:none">
-<button class="btn btn-outline btn-sm" onclick="document.getElementById('read-cover-file').click();return false" style="white-space:nowrap">📷 选择图片</button>
-<span id="read-cover-name" style="font-size:12px;color:var(--sub)">未选择</span>
+<input type="file" id="book-cover-file" accept="image/*" onchange="handleBookCoverUpload(this)" style="display:none">
+<button class="btn btn-outline btn-sm" onclick="document.getElementById('book-cover-file').click();return false" style="white-space:nowrap">📷 选择图片</button>
+<span id="book-cover-name" style="font-size:12px;color:var(--sub)">未选择</span>
 </div>
-<div id="read-cover-preview" style="margin-top:8px;display:none"><img id="read-cover-img" style="max-width:120px;max-height:160px;border-radius:6px;object-fit:cover;border:1px solid #eee"></div>
+<div id="book-cover-preview" style="margin-top:8px;display:none"><img id="book-cover-img" style="max-width:120px;max-height:160px;border-radius:6px;object-fit:cover;border:1px solid #eee"></div>
 </div>
-<div class="form-row">
 <div class="form-group">
 <label>开始阅读日期</label>
-<input class="form-input" id="read-start-date" type="date">
+<input class="form-input" id="book-start-date" type="date">
 </div>
-<div class="form-group">
-<label>本次阅读时长（分钟）</label>
-<input class="form-input" id="read-duration" type="number" placeholder="30">
-</div>
-</div>
-<div class="card-title" style="font-size:13px;margin-top:8px">📝 读书笔记 <span style="font-weight:400;font-size:11px;color:var(--sub)">（每篇笔记可添加批注）</span></div>
-<div id="read-notes-area"></div>
-<button class="btn btn-outline btn-sm" style="margin-top:6px;width:100%" onclick="addNoteField()">+ 添加一条笔记</button>
-<button class="btn btn-primary" style="margin-top:12px" onclick="addReading()">保存阅读记录</button>
+<button class="btn btn-primary" onclick="addBook()">添加到书架</button>
 </div>
 <div class="card">
 <div class="card-title">阅读统计</div>
 <div class="stats-row" id="read-stats"></div>
 </div>
 <div class="card">
-<div class="card-title">历史阅读记录</div>
-<div id="read-history"></div>
+<div class="card-title">我的书架</div>
+<div id="book-list"></div>
 </div>
+</div>
+
+<!-- 书籍详情视图 -->
+<div id="reading-detail-view" style="display:none">
+<div class="mod-header">
+<button class="back-btn" onclick="showBookList()">‹</button>
+<h1>📖 书籍详情</h1>
+</div>
+<div class="card" id="book-detail-info"></div>
+<div class="card">
+<div style="display:flex;justify-content:space-between;align-items:center">
+<div class="card-title">摘抄笔记</div>
+<button class="btn btn-outline btn-sm" onclick="toggleAddNoteForm()">+ 添加摘抄</button>
+</div>
+<div id="add-note-form" style="display:none;margin-top:10px;background:#f8f9fe;border-radius:8px;padding:10px">
+<textarea class="form-textarea" id="excerpt-text" placeholder="摘抄内容..." style="min-height:60px;font-size:13px"></textarea>
+<div id="excerpt-anno-area"></div>
+<button class="btn btn-outline btn-sm" style="color:#e17055;border-color:#e17055;font-size:11px;margin-top:4px" onclick="addExcerptAnno()">+ 添加批注</button>
+<div style="display:flex;gap:8px;margin-top:8px">
+<button class="btn btn-primary btn-sm" onclick="saveExcerpt()">保存摘抄</button>
+<button class="btn btn-outline btn-sm" onclick="toggleAddNoteForm()">取消</button>
+</div>
+</div>
+<div id="book-notes-list" style="margin-top:10px"></div>
+</div>
+</div>
+
 </section>
 
 <!-- ========== 灵感记录 ========== -->
@@ -565,7 +598,7 @@ function navHome(){$$('.view').forEach(v=>v.classList.remove('active'));$('#view
 
 // ====== 模块名称管理 ======
 const DEFAULT_MODULES={
-reading:{name:'阅读记录',icon:'📚',short:'阅读',desc:'记录阅读打卡',color:'rgba(108,92,231,.15)'},
+reading:{name:'阅读记录',icon:'📚',short:'阅读',desc:'书架与摘抄笔记',color:'rgba(108,92,231,.15)'},
 inspiration:{name:'灵感记录',icon:'💡',short:'灵感',desc:'捕捉每个想法',color:'rgba(255,165,2,.15)'},
 exercise:{name:'锻炼身体',icon:'🏃',short:'锻炼',desc:'运动打卡日历',color:'rgba(0,184,148,.15)'},
 accounting:{name:'每日记账',icon:'💰',short:'记账',desc:'收支一目了然',color:'rgba(255,107,107,.15)'},
@@ -638,14 +671,14 @@ const d=new Date();const wd=['日','一','二','三','四','五','六'];
 $('#home-date').textContent=d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日 星期'+wd[d.getDay()];
 const t=today();
 const cfg=getModuleConfig();
-const reading=DB.get('reading',[]);
+const reading=DB.get('books',[]);
 const exercises=DB.get('exercises',[]);
 const learning=DB.get('learning',[]);
 const accounts=DB.get('accounts',[]);
 const inspirations=DB.get('inspirations',[]);
 const memos=DB.get('memos',[]);
 const items=[
-{icon:cfg.reading.icon,label:cfg.reading.short,done:reading.some(r=>r.date===t)},
+{icon:cfg.reading.icon,label:cfg.reading.short,done:DB.get('readCheckins',[]).includes(t)},
 {icon:cfg.inspiration.icon,label:cfg.inspiration.short,done:inspirations.some(i=>i.date===t)},
 {icon:cfg.exercise.icon,label:cfg.exercise.short,done:exercises.some(e=>e.date===t)},
 {icon:cfg.accounting.icon,label:cfg.accounting.short,done:accounts.some(a=>a.date===t)},
@@ -655,54 +688,36 @@ const items=[
 $('#overview-grid').innerHTML=items.map(i=>`<div class="ov-item ${i.done?'done':''}"><div class="ov-icon">${i.icon}</div><div class="ov-label">${esc(i.label)}</div><div class="ov-status">${i.done?'已完成':'未完成'}</div></div>`).join('');
 }
 
-// ====== 1.阅读记录 ======
-let noteEntryCounter=0;
-function addNoteField(text,annotations){
-  noteEntryCounter++;
-  const idx=noteEntryCounter;
-  const annoHtml=annotations?annotations.map((a,ai)=>`
-    <div class="anno-row" style="display:flex;gap:6px;align-items:center;margin-top:4px">
-      <input class="form-input" value="${esc(a)}" placeholder="批注内容..." style="font-size:12px;flex:1">
-      <button class="btn btn-outline btn-sm" style="color:#e17055;border-color:#e17055;padding:4px 8px;font-size:11px;flex-shrink:0" onclick="this.closest('.anno-row').remove()">✕</button>
-    </div>
-  `).join(''):'';
-  const html=`
-    <div class="note-entry" data-note="${idx}" style="background:#f8f9fe;border-radius:8px;padding:10px;margin-bottom:8px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-        <span style="font-size:12px;color:#6c5ce7;font-weight:600">📝 笔记 #${idx}</span>
-        <button class="btn btn-outline btn-sm" style="color:#ff6b6b;border-color:#ff6b6b;padding:2px 8px;font-size:11px" onclick="this.closest('.note-entry').remove()">删除</button>
-      </div>
-      <textarea class="form-textarea" placeholder="写读书笔记..." style="min-height:50px;font-size:13px;margin-bottom:6px">${text||''}</textarea>
-      <div class="anno-list">${annoHtml}</div>
-      <button class="btn btn-outline btn-sm" style="color:#e17055;border-color:#e17055;font-size:11px;margin-top:4px" onclick="addAnnoField(this)">+ 添加批注</button>
-    </div>`;
-  $('#read-notes-area').insertAdjacentHTML('beforeend',html);
-}
-function addAnnoField(btn){
-  const list=btn.closest('.note-entry').querySelector('.anno-list');
-  list.insertAdjacentHTML('beforeend',`<div class="anno-row" style="display:flex;gap:6px;align-items:center;margin-top:4px"><input class="form-input" placeholder="批注内容..." style="font-size:12px;flex:1"><button class="btn btn-outline btn-sm" style="color:#e17055;border-color:#e17055;padding:4px 8px;font-size:11px" onclick="this.closest('.anno-row').remove()">✕</button></div>`);
-}
-function collectNotes(){
-  const notes=[];
-  $$('#read-notes-area .note-entry').forEach(entry=>{
-    const ta=entry.querySelector('textarea');
-    const text=(ta?ta.value:'').trim();
-    if(!text)return;
-    const annos=[];
-    entry.querySelectorAll('.anno-list input').forEach(inp=>{
-      const v=inp.value.trim();
-      if(v)annos.push(v);
-    });
-    notes.push({text,annotations:annos});
+// ====== 1.阅读记录（书架+详情分级） ======
+let currentBookId=null;
+let bookCoverDataUrl='';
+
+// 数据迁移：旧 reading 格式 → 新 books 格式
+function migrateBooks(){
+  if(DB.get('books',null)!==null)return;
+  const old=DB.get('reading',[]);
+  if(old.length===0){DB.set('books',[]);return}
+  const map={};
+  old.forEach(r=>{
+    const key=r.book+'|'+(r.author||'');
+    if(!map[key]){
+      map[key]={id:uid(),title:r.book,author:r.author||'',coverUrl:r.coverUrl||'',startDate:r.startDate||r.date||'',totalTime:r.duration||0,status:'reading',notes:[],createdTs:r.ts||now()};
+    }else{map[key].totalTime+=(r.duration||0)}
+    if(Array.isArray(r.notes)){
+      r.notes.forEach(n=>map[key].notes.push({id:uid(),text:n.text,annotations:n.annotations||[],date:r.date||today(),ts:r.ts||now()}));
+    }else if(typeof r.notes==='string'&&r.notes){
+      map[key].notes.push({id:uid(),text:r.notes,annotations:[],date:r.date||today(),ts:r.ts||now()});
+    }
   });
-  return notes;
+  DB.set('books',Object.values(map));
 }
-let coverDataUrl='';
-function handleCoverUpload(input){
+
+// 封面上传
+function handleBookCoverUpload(input){
   const file=input.files[0];
   if(!file)return;
   if(file.size>5*1024*1024){toast('图片不能超过5MB');input.value='';return}
-  $('#read-cover-name').textContent=file.name;
+  $('#book-cover-name').textContent=file.name;
   const reader=new FileReader();
   reader.onload=function(e){
     const img=new Image();
@@ -711,80 +726,223 @@ function handleCoverUpload(input){
       const maxW=200;const scale=Math.min(1,maxW/img.width);
       canvas.width=img.width*scale;canvas.height=img.height*scale;
       const ctx=canvas.getContext('2d');ctx.drawImage(img,0,0,canvas.width,canvas.height);
-      coverDataUrl=canvas.toDataURL('image/jpeg',0.75);
-      $('#read-cover-img').src=coverDataUrl;
-      $('#read-cover-preview').style.display='block';
+      bookCoverDataUrl=canvas.toDataURL('image/jpeg',0.75);
+      $('#book-cover-img').src=bookCoverDataUrl;
+      $('#book-cover-preview').style.display='block';
     };
     img.src=e.target.result;
   };
   reader.readAsDataURL(file);
 }
+
+// 打卡
 function toggleReadCheckin(){
   const checkins=DB.get('readCheckins',[]);
   const t=today();
   const idx=checkins.indexOf(t);
   if(idx>-1){checkins.splice(idx,1);toast('已取消今日打卡')}else{checkins.push(t);toast('今日阅读打卡成功！')}
-  DB.set('readCheckins',checkins);renderReadingCheckin()
+  DB.set('readCheckins',checkins);renderReadingCheckin();updateOverview()
 }
 function renderReadingCheckin(){
   const done=DB.get('readCheckins',[]).includes(today());
   const btn=$('#read-checkin');
+  if(!btn)return;
   btn.classList.toggle('done',done);
   btn.innerHTML=done?'✅ 今日已打卡':'📋 今日打卡';
 }
-function addReading(){
-  const book=$('#read-book').value.trim();
-  const author=$('#read-author').value.trim();
-  const startDate=$('#read-start-date').value;
-  const dur=parseInt($('#read-duration').value)||0;
-  const notes=collectNotes();
-  const coverUrl=coverDataUrl;
-  if(!book){toast('请输入书籍名称');return}
-  if(!dur){toast('请输入阅读时长');return}
-  if(notes.length===0){toast('请至少添加一条笔记');return}
-  const records=DB.get('reading',[]);
-  records.unshift({id:uid(),book,author,coverUrl,startDate,duration:dur,notes,date:today(),ts:now()});
-  DB.set('reading',records);
+
+// 添加书籍
+function addBook(){
+  const title=$('#book-title-input').value.trim();
+  const author=$('#book-author-input').value.trim();
+  const startDate=$('#book-start-date').value;
+  if(!title){toast('请输入书籍名称');return}
+  const books=DB.get('books',[]);
+  books.unshift({id:uid(),title,author,coverUrl:bookCoverDataUrl,startDate,totalTime:0,status:'reading',notes:[],createdTs:now()});
+  DB.set('books',books);
+  // 自动打卡
   const checkins=DB.get('readCheckins',[]);
   if(!checkins.includes(today())){checkins.push(today());DB.set('readCheckins',checkins)}
-  $('#read-book').value='';$('#read-author').value='';$('#read-start-date').value='';$('#read-duration').value='';
-  $('#read-notes-area').innerHTML='';$('#read-cover-preview').style.display='none';$('#read-cover-name').textContent='未选择';
-  $('#read-cover-file').value='';coverDataUrl='';noteEntryCounter=0;
-  toast('阅读记录已保存');renderReading();renderReadingCheckin()
+  $('#book-title-input').value='';$('#book-author-input').value='';$('#book-start-date').value='';
+  $('#book-cover-preview').style.display='none';$('#book-cover-name').textContent='未选择';
+  $('#book-cover-file').value='';bookCoverDataUrl='';
+  toast('书籍已添加到书架');renderBookList();renderReadingCheckin();updateOverview()
 }
-function renderReading(){
+
+// 渲染书架列表
+function renderBookList(){
   renderReadingCheckin();
-  const records=DB.get('reading',[]);
+  const books=DB.get('books',[]);
   const checkins=DB.get('readCheckins',[]);
   const weekDays=checkins.filter(isThisWeek).length;
   const monthDays=checkins.filter(isThisMonth).length;
-  const totalTime=records.reduce((s,r)=>s+(r.duration||0),0);
+  const totalTime=books.reduce((s,b)=>s+(b.totalTime||0),0);
+  const totalNotes=books.reduce((s,b)=>s+(b.notes?b.notes.length:0),0);
   $('#read-stats').innerHTML=`
     <div class="stat-box"><div class="stat-num">${weekDays}</div><div class="stat-label">本周阅读天数</div></div>
     <div class="stat-box"><div class="stat-num">${monthDays}</div><div class="stat-label">本月阅读天数</div></div>
     <div class="stat-box"><div class="stat-num">${Math.floor(totalTime/60)}h${totalTime%60}m</div><div class="stat-label">总阅读时长</div></div>
-    <div class="stat-box"><div class="stat-num">${records.length}</div><div class="stat-label">累计记录数</div></div>`;
-  if(records.length===0){$('#read-history').innerHTML='<div class="empty">暂无阅读记录，开始你的第一篇吧</div>';return}
-  $('#read-history').innerHTML=records.map(r=>{
-    const coverHtml=r.coverUrl?`<img src="${esc(r.coverUrl)}" onerror="this.style.display='none'" style="width:44px;height:58px;object-fit:cover;border-radius:4px;margin-right:10px;flex-shrink:0">`:'';
-    const authorStr=r.author?' — '+esc(r.author):'';
-    const dateStr=r.startDate?'📅 开始于 '+r.startDate+' · ':'';
-    const notesHtml=Array.isArray(r.notes)?r.notes.map((n,i)=>`<div class="note-block">📝 ${esc(n.text)}${(n.annotations||[]).map(a=>`<div class="anno-block">💬 ${esc(a)}</div>`).join('')}</div>`).join(''):'';
-    const legacyNotes=(typeof r.notes==='string'&&r.notes)?`<div class="note-block">${esc(r.notes)}</div>`:'';
-    return `<div class="list-item">
-      <div class="list-item-head">
-        ${coverHtml}
-        <div style="flex:1;min-width:0">
-          <div class="list-item-title">${esc(r.book)}${authorStr}</div>
-          <div class="list-item-meta">${dateStr}${fmtDate(r.date)} · ${r.duration}分钟${r.pages?' · 第'+esc(r.pages)+'页':''}</div>
-        </div>
-        <button class="delete-btn" onclick="delReading('${r.id}')">删除</button>
+    <div class="stat-box"><div class="stat-num">${books.length}</div><div class="stat-label">书架书籍</div></div>`;
+  if(books.length===0){$('#book-list').innerHTML='<div class="empty">书架空空如也，添加你的第一本书吧</div>';return}
+  $('#book-list').innerHTML=books.map(b=>{
+    const cover=b.coverUrl?`<img src="${esc(b.coverUrl)}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" class="book-cover"><div class="book-cover-placeholder" style="display:none">📖</div>`:`<div class="book-cover-placeholder">📖</div>`;
+    const authorStr=b.author?' · '+esc(b.author):'';
+    const dateStr=b.startDate?'📅 '+b.startDate:'';
+    const timeStr=b.totalTime?` · ⏱ ${Math.floor(b.totalTime/60)}h${b.totalTime%60}m`:'';
+    const noteCount=b.notes?b.notes.length:0;
+    const badge=b.status==='done'?'<span class="book-badge badge-done">已读完</span>':'<span class="book-badge badge-reading">阅读中</span>';
+    return `<div class="book-item" onclick="openBookDetail('${b.id}')">
+      ${cover}
+      <div class="book-info">
+        <div class="book-title">${esc(b.title)}${badge}</div>
+        <div class="book-meta">${dateStr}${authorStr}${timeStr}</div>
+        <div class="book-meta">📝 ${noteCount} 条摘抄</div>
       </div>
-      ${notesHtml}${legacyNotes}
     </div>`;
   }).join('');
 }
-function delReading(id){DB.set('reading',DB.get('reading',[]).filter(r=>r.id!==id));toast('已删除');renderReading()}
+
+// 删除书籍
+function delBook(id){
+  if(!confirm('删除这本书将同时删除所有摘抄笔记，确定吗？'))return;
+  DB.set('books',DB.get('books',[]).filter(b=>b.id!==id));
+  toast('已删除');showBookList()
+}
+
+// 打开书籍详情
+function openBookDetail(id){
+  currentBookId=id;
+  $('#reading-list-view').style.display='none';
+  $('#reading-detail-view').style.display='block';
+  renderBookDetail();
+  window.scrollTo(0,0);
+}
+function showBookList(){
+  currentBookId=null;
+  $('#reading-detail-view').style.display='none';
+  $('#reading-list-view').style.display='block';
+  renderBookList();
+  window.scrollTo(0,0);
+}
+
+// 渲染书籍详情
+function renderBookDetail(){
+  const books=DB.get('books',[]);
+  const book=books.find(b=>b.id===currentBookId);
+  if(!book){showBookList();return}
+  const cover=book.coverUrl?`<img src="${esc(book.coverUrl)}" onerror="this.style.display='none'" style="width:60px;height:80px;object-fit:cover;border-radius:6px;flex-shrink:0">`:`<div style="width:60px;height:80px;border-radius:6px;flex-shrink:0;background:linear-gradient(135deg,#a29bfe,#6c5ce7);display:flex;align-items:center;justify-content:center;font-size:24px">📖</div>`;
+  const badge=book.status==='done'?'<span class="book-badge badge-done">已读完</span>':'<span class="book-badge badge-reading">阅读中</span>';
+  const timeStr=book.totalTime?`⏱ 累计 ${Math.floor(book.totalTime/60)}h${book.totalTime%60}m`:'⏱ 暂无阅读时长';
+  $('#book-detail-info').innerHTML=`
+    <div style="display:flex;gap:12px">
+      ${cover}
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:700;font-size:16px">${esc(book.title)}${badge}</div>
+        ${book.author?`<div style="font-size:13px;color:var(--sub);margin-top:2px">作者：${esc(book.author)}</div>`:''}
+        ${book.startDate?`<div style="font-size:12px;color:var(--sub);margin-top:2px">📅 开始于 ${book.startDate}</div>`:''}
+        <div style="font-size:12px;color:var(--sub);margin-top:2px">${timeStr}</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+      <button class="btn btn-outline btn-sm" onclick="addReadingTime()">⏱ 添加阅读时长</button>
+      <button class="btn btn-outline btn-sm" onclick="toggleBookStatus()">${book.status==='done'?'↩️ 标记为阅读中':'✅ 标记为已读完'}</button>
+      <button class="btn btn-outline btn-sm" style="color:#ff6b6b;border-color:#ff6b6b" onclick="delBook('${book.id}')">🗑 删除书籍</button>
+    </div>`;
+  // 渲染摘抄列表
+  const notes=book.notes||[];
+  if(notes.length===0){
+    $('#book-notes-list').innerHTML='<div class="empty">暂无摘抄，点击右上角添加第一条吧</div>';
+  }else{
+    $('#book-notes-list').innerHTML=notes.map(n=>{
+      const annosHtml=(n.annotations||[]).map(a=>`<div class="anno-block">💬 ${esc(a)}</div>`).join('');
+      return `<div class="note-item">
+        <div class="note-item-head">
+          <span style="font-size:11px;color:#6c5ce7;font-weight:600">📝 ${fmtDate(n.date)}</span>
+          <button class="btn btn-outline btn-sm" style="color:#ff6b6b;border-color:#ff6b6b;padding:2px 8px;font-size:11px" onclick="delExcerpt('${n.id}')">删除</button>
+        </div>
+        <div class="note-block">${esc(n.text)}</div>
+        ${annosHtml}
+      </div>`;
+    }).join('');
+  }
+  // 隐藏添加表单
+  $('#add-note-form').style.display='none';
+  $('#excerpt-text').value='';
+  $('#excerpt-anno-area').innerHTML='';
+}
+
+// 添加阅读时长
+function addReadingTime(){
+  const mins=prompt('输入本次阅读时长（分钟）：','30');
+  if(!mins)return;
+  const m=parseInt(mins);
+  if(!m||m<=0){toast('请输入有效数字');return}
+  const books=DB.get('books',[]);
+  const book=books.find(b=>b.id===currentBookId);
+  if(!book)return;
+  book.totalTime=(book.totalTime||0)+m;
+  DB.set('books',books);
+  // 自动打卡
+  const checkins=DB.get('readCheckins',[]);
+  if(!checkins.includes(today())){checkins.push(today());DB.set('readCheckins',checkins)}
+  toast('已添加'+m+'分钟阅读时长');
+  renderBookDetail();updateOverview()
+}
+
+// 切换书籍状态
+function toggleBookStatus(){
+  const books=DB.get('books',[]);
+  const book=books.find(b=>b.id===currentBookId);
+  if(!book)return;
+  book.status=book.status==='done'?'reading':'done';
+  DB.set('books',books);
+  toast(book.status==='done'?'已标记为已读完':'已标记为阅读中');
+  renderBookDetail()
+}
+
+// 摘抄表单
+function toggleAddNoteForm(){
+  const f=$('#add-note-form');
+  if(f.style.display==='none'){
+    f.style.display='block';
+    $('#excerpt-text').focus();
+  }else{
+    f.style.display='none';
+    $('#excerpt-text').value='';
+    $('#excerpt-anno-area').innerHTML='';
+  }
+}
+function addExcerptAnno(){
+  $('#excerpt-anno-area').insertAdjacentHTML('beforeend',`<div class="anno-row" style="display:flex;gap:6px;align-items:center;margin-top:4px"><input class="form-input" placeholder="批注内容..." style="font-size:12px;flex:1"><button class="btn btn-outline btn-sm" style="color:#e17055;border-color:#e17055;padding:4px 8px;font-size:11px;flex-shrink:0" onclick="this.closest('.anno-row').remove()">✕</button></div>`);
+}
+function saveExcerpt(){
+  const text=$('#excerpt-text').value.trim();
+  if(!text){toast('请输入摘抄内容');return}
+  const annos=[];
+  $$('#excerpt-anno-area input').forEach(inp=>{const v=inp.value.trim();if(v)annos.push(v)});
+  const books=DB.get('books',[]);
+  const book=books.find(b=>b.id===currentBookId);
+  if(!book)return;
+  if(!book.notes)book.notes=[];
+  book.notes.unshift({id:uid(),text,annotations:annos,date:today(),ts:now()});
+  DB.set('books',books);
+  // 自动打卡
+  const checkins=DB.get('readCheckins',[]);
+  if(!checkins.includes(today())){checkins.push(today());DB.set('readCheckins',checkins)}
+  toast('摘抄已保存');
+  renderBookDetail();updateOverview()
+}
+function delExcerpt(noteId){
+  const books=DB.get('books',[]);
+  const book=books.find(b=>b.id===currentBookId);
+  if(!book||!book.notes)return;
+  book.notes=book.notes.filter(n=>n.id!==noteId);
+  DB.set('books',books);
+  toast('已删除摘抄');renderBookDetail()
+}
+
+// 兼容旧代码
+function renderReading(){renderBookList()}
 
 // ====== 2.灵感记录 ======
 let inspFilter='全部';
@@ -1075,7 +1233,7 @@ window.addEventListener('beforeinstallprompt',e=>{window._pwaEvent=e;});
 }
 
 // ====== 数据备份与恢复 ======
-const ALL_KEYS=['reading','readCheckins','inspirations','exercises','exerciseTypes','accounts','accCategories','learning','memos','timerState','moduleConfig','appTitle'];
+const ALL_KEYS=['reading','books','readCheckins','inspirations','exercises','exerciseTypes','accounts','accCategories','learning','memos','timerState','moduleConfig','appTitle'];
 function backupAllData(){
 const data={};ALL_KEYS.forEach(k=>{const v=localStorage.getItem('wb_'+k);if(v)data[k]=v});
 data['_backupTime']=new Date().toISOString();
@@ -1106,7 +1264,7 @@ event.target.value='';
 }
 function renderDataStats(){
 const stats=[
-['阅读记录',DB.get('reading',[]).length+'条'],
+['书架书籍',DB.get('books',[]).length+'本'],
 ['阅读打卡',DB.get('readCheckins',[]).length+'天'],
 ['灵感记录',DB.get('inspirations',[]).length+'条'],
 ['运动记录',DB.get('exercises',[]).length+'条'],
@@ -1149,6 +1307,7 @@ homeCard.appendChild(r);
 function init(){
 setupManifest();
 loadAppTitle();
+migrateBooks();
 renderModuleGrid();
 updateModuleHeaders();
 updateOverview();
