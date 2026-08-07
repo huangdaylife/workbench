@@ -1,5 +1,5 @@
 // Service Worker - enables PWA install on Chrome Android
-const CACHE_NAME = 'workbench-v2';
+const CACHE_NAME = 'workbench-v3';
 const ASSETS = [
   './',
   './index.html',
