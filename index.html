@@ -436,6 +436,26 @@ input:focus,textarea:focus,select:focus{outline:none}
 <button class="btn btn-danger" id="acc-submit" onclick="addAccount()">保存记录</button>
 </div>
 <div class="card">
+<div class="card-title">今日收支</div>
+<div class="stats-row" id="acc-today-stats"></div>
+</div>
+<div class="card">
+<div class="card-title">今日支出分布</div>
+<div id="acc-today-chart"></div>
+</div>
+<div class="card">
+<div class="card-title">本月收支</div>
+<div class="stats-row" id="acc-month-stats"></div>
+</div>
+<div class="card">
+<div class="card-title">本月支出分布</div>
+<div id="acc-chart"></div>
+</div>
+<div class="card">
+<div class="card-title">最近记录</div>
+<div id="acc-list"></div>
+</div>
+<div class="card">
 <div class="card-title">分类管理</div>
 <div class="form-group">
 <label style="margin-bottom:6px">支出分类</label>
@@ -453,22 +473,6 @@ input:focus,textarea:focus,select:focus{outline:none}
 <button class="btn btn-outline btn-sm" onclick="addAccCategory('income')">添加</button>
 </div>
 </div>
-</div>
-<div class="card">
-<div class="card-title">今日收支</div>
-<div class="stats-row" id="acc-today-stats"></div>
-</div>
-<div class="card">
-<div class="card-title">本月收支</div>
-<div class="stats-row" id="acc-month-stats"></div>
-</div>
-<div class="card">
-<div class="card-title">本月支出分布</div>
-<div id="acc-chart"></div>
-</div>
-<div class="card">
-<div class="card-title">最近记录</div>
-<div id="acc-list"></div>
 </div>
 </section>
 
@@ -596,7 +600,7 @@ del(k){localStorage.removeItem('wb_'+k)}
 };
 const $=s=>document.querySelector(s);
 const $$=s=>document.querySelectorAll(s);
-const today=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0')};
+const today=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
 const now=()=>new Date().toISOString();
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).substr(2,5);
 function fmtDate(d){const dt=new Date(d);return(dt.getMonth()+1)+'月'+dt.getDate()+'日'}
@@ -1224,6 +1228,11 @@ $('#acc-today-stats').innerHTML=`
 <div class="stat-box"><div class="stat-num" style="color:#00b894">¥${todayInc.toFixed(2)}</div><div class="stat-label">今日收入</div></div>
 <div class="stat-box"><div class="stat-num" style="color:#ff6b6b">¥${todayExp.toFixed(2)}</div><div class="stat-label">今日支出</div></div>
 <div class="stat-box"><div class="stat-num" style="color:${todayInc-todayExp>=0?'#00b894':'#ff6b6b'}">¥${(todayInc-todayExp).toFixed(2)}</div><div class="stat-label">今日结余</div></div>`;
+// 今日支出分布
+const todayExpByCat={};todayList.filter(a=>a.type==='expense').forEach(a=>{todayExpByCat[a.category]=(todayExpByCat[a.category]||0)+a.amount});
+const sortedToday=Object.entries(todayExpByCat).sort((a,b)=>b[1]-a[1]);
+if(sortedToday.length===0){$('#acc-today-chart').innerHTML='<div class="empty">今日暂无支出</div>'}
+else{const maxVal2=sortedToday[0][1];$('#acc-today-chart').innerHTML=sortedToday.map(([cat,val])=>`<div class="chart-row"><span class="chart-label">${cat}</span><div class="chart-bar-bg"><div class="chart-bar-fill" style="width:${(val/maxVal2*100).toFixed(0)}%;background:linear-gradient(90deg,#ff6b6b,#ffa502)"></div></div><span class="chart-val">¥${val.toFixed(2)}</span></div>`).join('')}
 const monthList=list.filter(a=>isThisMonth(a.date));
 const monthInc=monthList.filter(a=>a.type==='income').reduce((s,a)=>s+a.amount,0);
 const monthExp=monthList.filter(a=>a.type==='expense').reduce((s,a)=>s+a.amount,0);
