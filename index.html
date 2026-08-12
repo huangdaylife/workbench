@@ -270,6 +270,7 @@ input:focus,textarea:focus,select:focus{outline:none}
 <div class="card">
 <div class="card-title">我的书架</div>
 <div id="book-list"></div>
+<button class="btn btn-outline" style="margin-top:8px" onclick="exportBooks()">📥 导出书架 TXT</button>
 </div>
 </div>
 
@@ -548,6 +549,7 @@ input:focus,textarea:focus,select:focus{outline:none}
 <div class="card">
 <div class="card-title">备忘列表 <span style="font-size:12px;color:var(--sub);font-weight:400" id="memo-count"></span></div>
 <div id="memo-list"></div>
+<button class="btn btn-outline" style="margin-top:8px" onclick="exportMemos()">📥 导出备忘 TXT</button>
 </div>
 </section>
 
@@ -1078,6 +1080,42 @@ let txt='========== 灵感记录导出 ==========\n\n';
 list.forEach((i,idx)=>{txt+=`【${idx+1}】[${i.tag}]\n${i.text}\n时间：${fmtDateTime(i.ts)}\n\n`});
 const blob=new Blob([txt],{type:'text/plain;charset=utf-8'});
 const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='灵感记录_'+today()+'.txt';a.click();URL.revokeObjectURL(a.href);toast('导出成功')
+}
+// 导出书架 TXT
+function exportBooks(){
+const books=DB.get('books',[]);
+if(books.length===0){toast('书架暂无书籍可导出');return}
+let txt='========== 阅读记录导出 ==========\n';
+txt+=`共 ${books.length} 本书 · 导出时间 ${fmtDateTime(Date.now())}\n\n`;
+books.forEach((b,bi)=>{
+txt+=`【${bi+1}】《${b.title}》${b.author?' 作者：'+b.author:''}\n`;
+txt+=`状态：${b.status==='done'?'已读完':'阅读中'}${b.startDate?' · 开始阅读：'+b.startDate:''}${b.totalTime?' · 阅读时长：'+Math.floor(b.totalTime/60)+'小时'+b.totalTime%60+'分钟':''}\n`;
+const notes=b.notes||[];
+txt+=`摘抄笔记：${notes.length} 条\n`;
+if(notes.length>0){
+txt+=`──────────────────────────\n`;
+notes.forEach((n,ni)=>{
+txt+=`摘抄${ni+1}${n.date?'（'+n.date+'）':''}：\n${n.text}\n`;
+(n.annotations||[]).forEach(a=>{txt+=`  💬 批注：${a}\n`});
+txt+=`\n`;
+});
+}
+txt+=`══════════════════════════\n\n`;
+});
+const blob=new Blob([txt],{type:'text/plain;charset=utf-8'});
+const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='阅读记录_'+today()+'.txt';a.click();URL.revokeObjectURL(a.href);toast('导出成功')
+}
+// 导出备忘录 TXT
+function exportMemos(){
+const list=DB.get('memos',[]);
+if(list.length===0){toast('暂无备忘可导出');return}
+let txt='========== 备忘录导出 ==========\n';
+txt+=`共 ${list.length} 条备忘 · 导出时间 ${fmtDateTime(Date.now())}\n\n`;
+list.forEach((m,i)=>{
+txt+=`【${i+1}】${m.pinned?'📌 ':''}${m.text}\n时间：${fmtDateTime(m.ts)}\n\n`;
+});
+const blob=new Blob([txt],{type:'text/plain;charset=utf-8'});
+const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='备忘录_'+today()+'.txt';a.click();URL.revokeObjectURL(a.href);toast('导出成功')
 }
 
 // ====== 3.锻炼身体 ======
