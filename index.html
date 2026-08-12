@@ -452,8 +452,8 @@ input:focus,textarea:focus,select:focus{outline:none}
 <div id="acc-chart"></div>
 </div>
 <div class="card">
-<div class="card-title">最近记录</div>
-<div id="acc-list"></div>
+<div class="card-title" style="cursor:pointer" onclick="toggleFold('acc-recent')">最近记录 <span id="acc-recent-icon" style="font-size:12px;color:var(--sub);font-weight:400">▼</span></div>
+<div id="acc-recent" style="display:none"></div>
 </div>
 <div class="card">
 <div class="card-title">分类管理</div>
@@ -498,9 +498,37 @@ input:focus,textarea:focus,select:focus{outline:none}
 <div class="card-title">累计学习统计</div>
 <div class="stats-row" id="learn-stats"></div>
 </div>
+<div id="learning-list-view">
 <div class="card">
 <div class="card-title">学习任务列表</div>
 <div id="learn-list"></div>
+</div>
+</div>
+
+<!-- 学习任务打卡详情视图 -->
+<div id="learning-detail-view" style="display:none">
+<div class="mod-header">
+<button class="back-btn" onclick="showLearnList()">‹</button>
+<h1>📖 任务打卡</h1>
+</div>
+<div class="card" id="learn-detail-info"></div>
+<div class="card">
+<div class="card-title">⏱ 记录学习时长</div>
+<div style="display:flex;gap:8px;margin-bottom:10px">
+<input class="form-input" id="time-minutes" type="number" placeholder="分钟数" min="1" style="flex:1">
+<input class="form-input" id="time-note" type="text" placeholder="备注（可选）" style="flex:2">
+</div>
+<button class="btn btn-primary" onclick="addTimeRecord()">+ 记录时长</button>
+<div id="time-record-list" style="margin-top:10px"></div>
+</div>
+<div class="card">
+<div class="card-title">打卡记录</div>
+<div class="form-group">
+<input class="form-input" id="checkin-note" type="text" placeholder="这次学习了什么？（可选）">
+</div>
+<button class="btn btn-primary" onclick="addCheckin()">✅ 打卡</button>
+<div id="checkin-list" style="margin-top:10px"></div>
+</div>
 </div>
 </section>
 
@@ -1246,14 +1274,12 @@ const sorted=Object.entries(expByCat).sort((a,b)=>b[1]-a[1]);
 if(sorted.length===0){$('#acc-chart').innerHTML='<div class="empty">暂无支出数据</div>'}
 else{const maxVal=sorted[0][1];$('#acc-chart').innerHTML=sorted.map(([cat,val])=>`<div class="chart-row"><span class="chart-label">${cat}</span><div class="chart-bar-bg"><div class="chart-bar-fill" style="width:${(val/maxVal*100).toFixed(0)}%;background:linear-gradient(90deg,#ff6b6b,#ffa502)"></div></div><span class="chart-val">¥${val.toFixed(2)}</span></div>`).join('')}
 // 列表
-if(list.length===0){$('#acc-list').innerHTML='<div class="empty">暂无记账记录</div>';return}
-$('#acc-list').innerHTML=list.slice(0,30).map(a=>`<div class="record-item"><div class="record-left"><span class="tag ${a.type==='income'?'tag-inc':'tag-exp'}">${a.type==='income'?'收入':'支出'}</span> <span style="font-size:13px">${a.category}</span>${a.note?' <span style="font-size:12px;color:var(--sub)">'+esc(a.note)+'</span>':''}<div class="list-item-meta">${fmtDate(a.date)}</div></div><div class="record-right"><span class="record-amount" style="color:${a.type==='income'?'#00b894':'#ff6b6b'}">${a.type==='income'?'+':'-'}¥${a.amount.toFixed(2)}</span><br><button class="delete-btn" onclick="delAccount('${a.id}')">删除</button></div></div>`).join('');
+if(list.length===0){$('#acc-recent').innerHTML='<div class="empty">暂无记账记录</div>';return}
+$('#acc-recent').innerHTML=list.slice(0,30).map(a=>`<div class="record-item"><div class="record-left"><span class="tag ${a.type==='income'?'tag-inc':'tag-exp'}">${a.type==='income'?'收入':'支出'}</span> <span style="font-size:13px">${a.category}</span>${a.note?' <span style="font-size:12px;color:var(--sub)">'+esc(a.note)+'</span>':''}<div class="list-item-meta">${fmtDate(a.date)}</div></div><div class="record-right"><span class="record-amount" style="color:${a.type==='income'?'#00b894':'#ff6b6b'}">${a.type==='income'?'+':'-'}¥${a.amount.toFixed(2)}</span><br><button class="delete-btn" onclick="delAccount('${a.id}')">删除</button></div></div>`).join('');
 }
 function delAccount(id){DB.set('accounts',DB.get('accounts',[]).filter(a=>a.id!==id));toast('已删除');renderAccounting();updateOverview()}
 
 // ====== 5.其他学习 ======
-let timerState=DB.get('timerState',null);
-let timerInterval=null;
 function addLearning(){
 const subject=$('#learn-subject').value.trim();
 const content=$('#learn-content').value.trim();
@@ -1264,40 +1290,17 @@ DB.set('learning',list);
 $('#learn-subject').value='';$('#learn-content').value='';
 toast('学习任务已添加');renderLearning()
 }
-function startTimer(taskId){
-if(timerState)stopTimer(false);
-timerState={taskId,startTs:Date.now()};
-DB.set('timerState',timerState);
-timerInterval=setInterval(()=>{updateTimerDisplay()},1000);
-toast('计时开始');renderLearning()
-}
-function stopTimer(showMsg=true){
-if(!timerState)return;
-const list=DB.get('learning',[]);
-const task=list.find(t=>t.id===timerState.taskId);
-if(task){const elapsed=Math.floor((Date.now()-timerState.startTs)/1000);task.accumulatedSeconds=(task.accumulatedSeconds||0)+elapsed;DB.set('learning',list)}
-timerState=null;DB.set('timerState',null);
-if(timerInterval){clearInterval(timerInterval);timerInterval=null}
-if(showMsg)toast('计时已停止');
-renderLearning()
-}
-function updateTimerDisplay(){
-const el=$('#learn-timer-'+(timerState?timerState.taskId:''));
-if(!el||!timerState)return;
-const list=DB.get('learning',[]);
-const task=list.find(t=>t.id===timerState.taskId);
-if(!task)return;
-const elapsed=Math.floor((Date.now()-timerState.startTs)/1000);
-el.textContent=fmtTime((task.accumulatedSeconds||0)+elapsed);
+function renderLearningOrDetail(){
+if(currentLearnId)renderLearnDetail();
+else renderLearning();
 }
 function toggleLearnComplete(taskId){
 const list=DB.get('learning',[]);
 const task=list.find(t=>t.id===taskId);
-if(task){task.completed=!task.completed;task.date=task.completed?today():task.date;DB.set('learning',list);toast(task.completed?'已完成打卡':'已取消完成');renderLearning();updateOverview()}
+if(task){task.completed=!task.completed;task.date=task.completed?today():task.date;DB.set('learning',list);toast(task.completed?'已完成打卡':'已取消完成');renderLearningOrDetail();updateOverview()}
 }
 function delLearning(id){
-if(timerState&&timerState.taskId===id)stopTimer(false);
-DB.set('learning',DB.get('learning',[]).filter(t=>t.id!==id));toast('已删除');renderLearning()
+DB.set('learning',DB.get('learning',[]).filter(t=>t.id!==id));toast('已删除');if(currentLearnId===id)showLearnList();else renderLearning()
 }
 function renderLearning(){
 const list=DB.get('learning',[]);
@@ -1308,27 +1311,127 @@ $('#learn-stats').innerHTML=`
 <div class="stat-box"><div class="stat-num">${list.length}</div><div class="stat-label">学习任务数</div></div>
 <div class="stat-box"><div class="stat-num">${completed}</div><div class="stat-label">已完成</div></div>`;
 if(list.length===0){$('#learn-list').innerHTML='<div class="empty">暂无学习任务，添加一个开始学习吧</div>';return}
-// 恢复计时器
-if(timerState&&!timerInterval){timerInterval=setInterval(()=>updateTimerDisplay(),1000)}
 $('#learn-list').innerHTML=list.map(t=>{
-const isRunning=timerState&&timerState.taskId===t.id;
 let displaySec=t.accumulatedSeconds||0;
-if(isRunning)displaySec+=Math.floor((Date.now()-timerState.startTs)/1000);
-return `<div class="task-item ${t.completed?'completed':''}">
+const checkins=(t.checkins||[]).length;
+const timeRecords=(t.timeRecords||[]).length;
+return `<div class="task-item ${t.completed?'completed':''}" style="cursor:pointer" onclick="openLearnDetail('${t.id}')">
 <div class="list-item-head">
 <div style="flex:1">
 <div class="task-title">${esc(t.subject)}</div>
 ${t.content?'<div class="task-meta">'+esc(t.content)+'</div>':''}
-<div class="task-meta">累计：<span class="timer-display ${isRunning?'timer-running':''}" id="learn-timer-${t.id}">${fmtTime(displaySec)}</span></div>
+<div class="task-meta">累计：${fmtTime(displaySec)} · 打卡 ${checkins} 次 · 记录时长 ${timeRecords} 次</div>
 </div>
-<button class="delete-btn" onclick="delLearning('${t.id}')">删除</button>
+<div style="text-align:right">
+<button class="delete-btn" onclick="event.stopPropagation();delLearning('${t.id}')">删除</button>
+</div>
 </div>
 <div class="task-actions">
-${isRunning?'<button class="btn btn-danger btn-sm" onclick="stopTimer()">⏸ 停止计时</button>':'<button class="btn btn-primary btn-sm" onclick="startTimer(\''+t.id+'\')">▶ 开始计时</button>'}
-<button class="btn ${t.completed?'btn-outline':'btn-success'} btn-sm" onclick="toggleLearnComplete('${t.id}')">${t.completed?'↩ 取消完成':'✓ 完成'}</button>
+<button class="btn ${t.completed?'btn-outline':'btn-success'} btn-sm" onclick="event.stopPropagation();toggleLearnComplete('${t.id}')">${t.completed?'↩ 取消完成':'✓ 完成'}</button>
+<button class="btn btn-outline btn-sm" onclick="event.stopPropagation();openLearnDetail('${t.id}')">📋 打卡</button>
 </div>
 </div>`
 }).join('');
+}
+
+// ====== 学习任务打卡详情 ======
+let currentLearnId=null;
+function openLearnDetail(id){
+currentLearnId=id;
+$('#learning-list-view').style.display='none';
+$('#learning-detail-view').style.display='block';
+renderLearnDetail();
+window.scrollTo(0,0);
+}
+function showLearnList(){
+currentLearnId=null;
+$('#learning-detail-view').style.display='none';
+$('#learning-list-view').style.display='block';
+renderLearning();
+window.scrollTo(0,0);
+}
+function renderLearnDetail(){
+const list=DB.get('learning',[]);
+const t=list.find(x=>x.id===currentLearnId);
+if(!t){showLearnList();return}
+const checkins=t.checkins||[];
+const timeRecords=t.timeRecords||[];
+let displaySec=t.accumulatedSeconds||0;
+$('#learn-detail-info').innerHTML=`
+<div class="task-title" style="font-size:16px">${esc(t.subject)}</div>
+${t.content?'<div class="task-meta" style="margin-top:6px">'+esc(t.content)+'</div>':''}
+<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">
+<button class="btn ${t.completed?'btn-outline':'btn-success'} btn-sm" onclick="toggleLearnComplete('${t.id}')">${t.completed?'↩ 取消完成':'✓ 完成'}</button>
+</div>
+<div class="stats-row" style="margin-top:10px">
+<div class="stat-box"><div class="stat-num">${fmtTime(displaySec)}</div><div class="stat-label">累计学习时长</div></div>
+<div class="stat-box"><div class="stat-num">${checkins.length}</div><div class="stat-label">打卡次数</div></div>
+</div>`;
+// 时长记录列表
+if(timeRecords.length===0){$('#time-record-list').innerHTML='<div class="empty">还没有时长记录</div>'}
+else{$('#time-record-list').innerHTML=timeRecords.slice().reverse().map(r=>`
+<div class="note-item" style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+<div style="flex:1">
+<div class="task-meta" style="margin-top:0;color:var(--primary);font-weight:600">${fmtDateTime(r.ts)} · 学习 ${r.minutes} 分钟</div>
+${r.note?'<div style="font-size:14px;margin-top:4px;color:var(--text)">'+esc(r.note)+'</div>':''}
+</div>
+<button class="delete-btn" onclick="delTimeRecord('${t.id}','${r.id}')">删除</button>
+</div>`).join('')}
+// 打卡列表
+if(checkins.length===0){$('#checkin-list').innerHTML='<div class="empty">还没有打卡记录</div>';return}
+$('#checkin-list').innerHTML=checkins.slice().reverse().map(c=>`
+<div class="note-item" style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+<div style="flex:1">
+<div class="task-meta" style="margin-top:0;color:var(--primary);font-weight:600">${fmtDateTime(c.ts)}</div>
+${c.note?'<div style="font-size:14px;margin-top:4px;color:var(--text)">'+esc(c.note)+'</div>':''}
+</div>
+<button class="delete-btn" onclick="delCheckin('${t.id}','${c.id}')">删除</button>
+</div>`).join('');
+}
+function addCheckin(){
+if(!currentLearnId)return;
+const note=$('#checkin-note').value.trim();
+const list=DB.get('learning',[]);
+const t=list.find(x=>x.id===currentLearnId);
+if(!t)return;
+if(!t.checkins)t.checkins=[];
+t.checkins.push({id:uid(),ts:Date.now(),note});
+DB.set('learning',list);
+$('#checkin-note').value='';
+toast('打卡成功');renderLearnDetail();updateOverview()
+}
+function delCheckin(taskId,cid){
+const list=DB.get('learning',[]);
+const t=list.find(x=>x.id===taskId);
+if(!t||!t.checkins)return;
+t.checkins=t.checkins.filter(c=>c.id!==cid);
+DB.set('learning',list);
+toast('已删除打卡');renderLearnDetail()
+}
+function addTimeRecord(){
+if(!currentLearnId)return;
+const minutes=parseInt($('#time-minutes').value,10);
+const note=$('#time-note').value.trim();
+if(!minutes||minutes<=0){toast('请输入有效的分钟数');return}
+const list=DB.get('learning',[]);
+const t=list.find(x=>x.id===currentLearnId);
+if(!t)return;
+if(!t.timeRecords)t.timeRecords=[];
+t.timeRecords.push({id:uid(),ts:Date.now(),minutes,note});
+t.accumulatedSeconds=(t.accumulatedSeconds||0)+minutes*60;
+DB.set('learning',list);
+$('#time-minutes').value='';$('#time-note').value='';
+toast(`已记录 ${minutes} 分钟`);renderLearnDetail();updateOverview()
+}
+function delTimeRecord(taskId,rid){
+const list=DB.get('learning',[]);
+const t=list.find(x=>x.id===taskId);
+if(!t||!t.timeRecords)return;
+const r=t.timeRecords.find(x=>x.id===rid);
+if(r){t.accumulatedSeconds=Math.max(0,(t.accumulatedSeconds||0)-r.minutes*60)}
+t.timeRecords=t.timeRecords.filter(x=>x.id!==rid);
+DB.set('learning',list);
+toast('已删除时长记录');renderLearnDetail();updateOverview()
 }
 
 // ====== 6.备忘录 ======
@@ -1366,6 +1469,15 @@ function cancelMemoEdit(){editingMemoId=null;renderMemos()}
 function saveMemoEdit(id){const v=$('#memo-edit-'+id).value.trim();if(!v){toast('内容不能为空');return}const list=DB.get('memos',[]);const m=list.find(x=>x.id===id);if(m){m.text=v;m.ts=now();DB.set('memos',list)}editingMemoId=null;toast('已修改');renderMemos()}
 function delMemo(id){DB.set('memos',DB.get('memos',[]).filter(m=>m.id!==id));toast('已删除');renderMemos();updateOverview()}
 
+function toggleFold(id){
+  const el=$('#'+id);
+  const icon=$('#'+id+'-icon');
+  if(!el)return;
+  const isHidden=el.style.display==='none';
+  el.style.display=isHidden?'block':'none';
+  if(icon)icon.textContent=isHidden?'▼':'▶';
+}
+
 // ====== HTML转义 ======
 function esc(s){if(!s)return'';return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
 
@@ -1384,7 +1496,7 @@ window.addEventListener('beforeinstallprompt',e=>{window._pwaEvent=e;});
 }
 
 // ====== 数据备份与恢复 ======
-const ALL_KEYS=['reading','books','readCheckins','inspirations','exercises','exerciseTypes','bodyWeights','accounts','accCategories','learning','memos','timerState','moduleConfig','appTitle'];
+const ALL_KEYS=['reading','books','readCheckins','inspirations','exercises','exerciseTypes','bodyWeights','accounts','accCategories','learning','memos','moduleConfig','appTitle'];
 function backupAllData(){
 const data={};ALL_KEYS.forEach(k=>{const v=localStorage.getItem('wb_'+k);if(v)data[k]=v});
 data['_backupTime']=new Date().toISOString();
@@ -1465,11 +1577,7 @@ updateModuleHeaders();
 updateOverview();
 checkBackupReminder();
 // 恢复学习计时器
-if(timerState){
-const list=DB.get('learning',[]);
-if(!list.find(t=>t.id===timerState.taskId)){timerState=null;DB.set('timerState',null)}
-else{timerInterval=setInterval(()=>updateTimerDisplay(),1000)}
-}
+// 已改为手动填写时长，不再自动恢复计时器
 }
 init();
 </script>
