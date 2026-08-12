@@ -571,11 +571,6 @@ input:focus,textarea:focus,select:focus{outline:none}
 </div>
 </div>
 <div class="card">
-<div class="card-title">⛶ 全屏模式</div>
-<p style="font-size:13px;color:var(--sub);margin-bottom:12px">点击进入全屏，隐藏浏览器地址栏，获得沉浸式体验。再点一次或按返回键退出。</p>
-<button class="btn btn-primary" id="fullscreen-btn" onclick="toggleFullscreen()">⛶ 进入全屏</button>
-</div>
-<div class="card">
 <div class="card-title">模块重命名</div>
 <p style="font-size:13px;color:var(--sub);margin-bottom:12px">自定义各模块名称和图标，修改后首页和模块标题同步更新。</p>
 <div id="rename-list"></div>
@@ -1537,28 +1532,6 @@ const favLink=document.createElement('link');favLink.rel='icon';favLink.href=ico
 // Listen for app title changes to update manifest
 window.addEventListener('beforeinstallprompt',e=>{window._pwaEvent=e;});
 }
-
-// ====== 全屏模式 ======
-function toggleFullscreen(){
-if(document.fullscreenElement||document.webkitFullscreenElement){
-const exitFn=document.exitFullscreen||document.webkitExitFullscreen;
-if(exitFn)exitFn.call(document);
-}else{
-const el=document.documentElement;
-const reqFn=el.requestFullscreen||el.webkitRequestFullscreen;
-if(reqFn){
-const p=reqFn.call(el);
-if(p&&p.catch)p.catch(()=>toast('当前浏览器不支持全屏'));
-}else{toast('当前浏览器不支持全屏')}
-}
-}
-function updateFullscreenBtn(){
-const fs=document.fullscreenElement||document.webkitFullscreenElement;
-const btn=$('#fullscreen-btn');
-if(btn)btn.textContent=fs?'⛶ 退出全屏':'⛶ 进入全屏';
-}
-document.addEventListener('fullscreenchange',updateFullscreenBtn);
-document.addEventListener('webkitfullscreenchange',updateFullscreenBtn);
 
 // ====== 数据备份与恢复 ======
 const ALL_KEYS=['reading','books','readCheckins','inspirations','exercises','exerciseTypes','bodyWeights','accounts','accCategories','learning','memos','moduleConfig','appTitle'];
